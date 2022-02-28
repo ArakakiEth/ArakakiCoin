@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+project_dir=$(cd $(dirname $0)/.. && pwd)
+
+open -n -b com.google.chrome \
+    --args \
+    --user-data-dir=${project_dir}/.chrome
+

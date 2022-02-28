@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+  node:
+    image: "node:gallium"
+    container_name: "hardhat-node"
+    working_dir: "/root/app"
+    command: >
+      sh -c
+      "npx hardhat node"
+      # "while :; do sleep 1000; done;"
+    volumes:
+      - "./node/app:/root/app"
+    ports:
+      - "8545:8545"
+
+  nginx:
+    image: "nginx:1.20.2"
+    container_name: "hardhat-nginx"
+    working_dir: "/usr/share/nginx/html"
+    command: >
+      /bin/bash -c
+      "nginx -g 'daemon off;'"
+    volumes:
+      - "./nginx/html:/usr/share/nginx/html"
+    ports:
+      - "8081:80"
+

@@ -1,0 +1,24 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "logs": "docker logs -f hardhat-node",
+    "console": "docker exec -it hardhat-node sh -c 'npx hardhat --network localhost console'",
+    "deploy-arakaki-coin": "docker exec -it hardhat-node sh -c 'npx hardhat --network localhost run scripts/deploy-arakaki-coin.js'",
+    "deploy-arakaki-coin-astar": "docker exec -it hardhat-node sh -c 'npx hardhat --network astar run scripts/deploy-arakaki-coin.js'"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.5",
+    "@nomiclabs/hardhat-waffle": "^2.0.2",
+    "@openzeppelin/contracts": "^4.5.0",
+    "chai": "^4.3.6",
+    "dotenv": "^16.0.0",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.5.4",
+    "hardhat": "^2.8.4"
+  }
+}

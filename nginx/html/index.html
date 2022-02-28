@@ -1,0 +1,545 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <style>
+    #drip-button {
+      padding: 24px;
+      background-color: #d3507a;
+      border: none;
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    #drip-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    </style>
+  </head>
+
+  <body style="margin: 0; font-family: Roboto,-apple-system,Helvetica Neue,Helvetica,Arial,sans-serif;">
+    <div style="padding: 48px 24px;">
+      <h1 style="margin: 0; line-height: 32px; color: #6667ab; font-size: 32px;">
+        Drip Arakaki Coin (ARKC)
+      </h1>
+
+      <dl style="margin: 8px 0 0;">
+        <dt style="font-size: 16px; color: #999999;">
+          Token Contract Address:
+        </dt>
+
+        <dd style="margin: 0;">
+          <input type="text" value="0x5FbDB2315678afecb367f032d93F642f64180aa3" style="display: block; padding: 4px; width: calc(100% - 10px); border: solid 1px #999999;">
+        </dd>
+      </dl>
+
+      <div style="margin-top: 24px; padding: 24px; background-color: #6667ab; border-radius: 12px; color: #ffffff;">
+        <h2 style="margin: 0;">
+          Dripped:
+        </h2>
+
+        <div style="margin-top: 12px;">
+          <span id="dripper-count-text" style="font-size: 64px; font-weight: bold;"></span>
+
+          <span style="margin-left: 12px; font-size: 40px;">/</span>
+
+          <span id="dripper-count-max-text" style="margin-left: 12px; font-size: 32px;"></span>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; padding: 24px; background-color: #6667ab; border-radius: 12px; color: #ffffff;">
+        <h2 style="margin: 0;">
+          Drip Amount:
+        </h2>
+
+        <div>
+          <span id="drip-amount-text" style="font-size: 64px; font-weight: bold;"></span>
+
+          <span style="margin-left: 12px; font-size: 32px;">ARKC</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <button id="drip-button" disabled>
+          Drip Coin
+        </button>
+      </div>
+    </div>
+
+    <script src="//cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/bignumber.js@9.0.2/bignumber.min.js"></script>
+
+    <script>
+    window.addEventListener("DOMContentLoaded", async (event) => {
+      if (!window.ethereum) {
+        return alert("You need to install MetaMask to play this page.");
+      }
+
+      const dripperCountText = document.querySelector("#dripper-count-text");
+      const dripperCountMaxText = document.querySelector("#dripper-count-max-text");
+      const dripAmountText = document.querySelector("#drip-amount-text");
+      const dripButton = document.querySelector("#drip-button");
+
+      const web3 = new Web3(ethereum);
+
+      await ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [
+          {
+            chainId: "0x250",
+          },
+        ],
+      });
+
+      const accounts = await ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+      if (!accounts[0]) {
+        return alert("Failed to access wallet.");
+      }
+
+      const arakakiCoin = getArakakiCoin(web3);
+
+      const hasArakakiCoinAddedToWallet = await ethereum.request({
+        method: "wallet_watchAsset",
+        params: {
+          type: "ERC20",
+          options: {
+            address: arakakiCoin._address,
+            symbol: "ARKC",
+            decimals: "18",
+            image: "https://ipfs.io/ipfs/QmNgB4MwST6CHkE5GVb1xrANsPRvnzyNaopbrVx5uQ7xUC",
+          },
+        },
+      });
+
+      const dripperCount = new BigNumber(await arakakiCoin.methods.getDripperCount().call().catch((err) => {
+        console.error({ error: err });
+
+        return "0";
+      }));
+
+      dripperCountText.textContent = dripperCount.toFixed(0);
+
+      const dripperCountMax = new BigNumber(await arakakiCoin.methods.getDripperCountMax().call().catch((err) => {
+        console.error({ error: err });
+
+        return "0";
+      }));
+
+      dripperCountMaxText.textContent = dripperCountMax.toFixed(0);
+
+      const dripAmount = new BigNumber(await arakakiCoin.methods.getDripAmount().call().catch((err) => {
+        console.error({ error: err });
+
+        return "0";
+      }));
+
+      dripAmountText.textContent = dripAmount.toFixed(0);
+
+      const hasAlreadyDripped = await arakakiCoin.methods.checkAlreadyDripped(accounts[0]).call();
+
+      if (hasAlreadyDripped) {
+        dripButton.textContent = "This account has already dripped the coin.";
+      } else {
+        dripButton.disabled = false;
+      }
+
+      dripButton.addEventListener("click", async (event) => {
+        dripButton.disabled = true;
+
+        await arakakiCoin.methods.drip().send({
+          from: accounts[0],
+        }).catch((err) => {
+          console.error({ error: err });
+        });
+
+        location.reload();
+      });
+
+      console.log({ accounts, arakakiCoin, dripperCount, dripperCountMax, hasAlreadyDripped });
+    });
+
+    function getArakakiCoin(web3) {
+      const abi = [
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "name": "Approval",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "name": "Transfer",
+          "type": "event"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            }
+          ],
+          "name": "allowance",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "approve",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "balanceOf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "dripperAddress",
+              "type": "address"
+            }
+          ],
+          "name": "checkAlreadyDripped",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "decimals",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "subtractedValue",
+              "type": "uint256"
+            }
+          ],
+          "name": "decreaseAllowance",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "drip",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getDripAmount",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getDripperCount",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getDripperCountMax",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "addedValue",
+              "type": "uint256"
+            }
+          ],
+          "name": "increaseAllowance",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "dripperCountToIncrease",
+              "type": "uint256"
+            }
+          ],
+          "name": "increaseDripperCountMax",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "name",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "newDripAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "setDripAmount",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "symbol",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "totalSupply",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "transfer",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "transferFrom",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ];
+
+      const address = "0xfe94a4571F37c761BB709d67A4bBf402634DEC5F";
+
+      return new web3.eth.Contract(abi, address);
+    }
+    </script>
+  </body>
+</html>
+
