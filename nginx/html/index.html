@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
     <style>
+    #add-to-wallet-button,
     #drip-button {
+      display: block;
       padding: 24px;
+      width: 100%;
       background-color: #d3507a;
       border: none;
       color: #ffffff;
@@ -14,6 +17,7 @@
       font-weight: bold;
     }
 
+    #add-to-wallet-button:disabled,
     #drip-button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -64,9 +68,35 @@
       </div>
 
       <div style="margin-top: 32px;">
+        <button id="add-to-wallet-button">
+          Add Arakaki Coin to Wallet
+        </button>
+      </div>
+
+      <div style="margin-top: 32px;">
         <button id="drip-button" disabled>
           Drip Coin
         </button>
+      </div>
+
+      <div style="margin-top: 24px; padding: 24px; border: solid 1px #999; border-radius: 16px;">
+        <h2 style="margin: 0;">
+          Note:
+        </h2>
+
+        <ul>
+          <li>
+            <a href="https://docs.astar.network/integration/network-details" target="_blank">
+              Astar Network Details
+            </a>
+          </li>
+
+          <li>
+            <a href="https://portal.astar.network/#/balance/wallet" target="_blank">
+              ASTR Faucet
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -82,6 +112,7 @@
       const dripperCountText = document.querySelector("#dripper-count-text");
       const dripperCountMaxText = document.querySelector("#dripper-count-max-text");
       const dripAmountText = document.querySelector("#drip-amount-text");
+      const addToWalletButton = document.querySelector("#add-to-wallet-button");
       const dripButton = document.querySelector("#drip-button");
 
       const web3 = new Web3(ethereum);
@@ -104,19 +135,6 @@
       }
 
       const arakakiCoin = getArakakiCoin(web3);
-
-      const hasArakakiCoinAddedToWallet = await ethereum.request({
-        method: "wallet_watchAsset",
-        params: {
-          type: "ERC20",
-          options: {
-            address: arakakiCoin._address,
-            symbol: "ARKC",
-            decimals: "18",
-            image: "https://github.com/ArakakiEth/ArakakiCoin/blob/main/arakaki-coin-logo.png?raw=true",
-          },
-        },
-      });
 
       const dripperCount = new BigNumber(await arakakiCoin.methods.getDripperCount().call().catch((err) => {
         console.error({ error: err });
@@ -162,7 +180,20 @@
         location.reload();
       });
 
-      console.log({ accounts, arakakiCoin, dripperCount, dripperCountMax, hasAlreadyDripped });
+      addToWalletButton.addEventListener("click", async (event) => {
+        await ethereum.request({
+          method: "wallet_watchAsset",
+          params: {
+            type: "ERC20",
+            options: {
+              address: arakakiCoin._address,
+              symbol: "ARKC",
+              decimals: "18",
+              image: "https://github.com/ArakakiEth/ArakakiCoin/blob/main/arakaki-coin-logo.png?raw=true",
+            },
+          },
+        });
+      });
     });
 
     function getArakakiCoin(web3) {
